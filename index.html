@@ -1,0 +1,1620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medication Reminder & Health Tracker</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Arial, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #a1c4fd, #c2e9fb);
+            transition: background 0.5s ease;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: linear-gradient(90deg, #1e3c72, #2a5298);
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav {
+            display: flex;
+            justify-content: space-around;
+            background: #e6f0fa;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            flex-wrap: wrap;
+        }
+
+        .nav button {
+            background: none;
+            border: none;
+            padding: 12px 20px;
+            cursor: pointer;
+            font-size: 16px;
+            color: #1e3c72;
+            border-radius: 8px;
+            transition: transform 0.3s, background 0.3s;
+        }
+
+        .nav button:hover:not(:disabled) {
+            background: #2a5298;
+            color: white;
+            transform: scale(1.1);
+        }
+
+        .nav button.active {
+            background: #1e3c72;
+            color: white;
+        }
+
+        .nav button:disabled {
+            color: #b0bec5;
+            cursor: not-allowed;
+        }
+
+        .section {
+            display: none;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+            animation: slideUp 0.5s ease;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #1e3c72;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e7ff;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            border-color: #2a5298;
+            box-shadow: 0 0 8px rgba(42, 82, 152, 0.3);
+            outline: none;
+        }
+
+        .btn {
+            background: #2a5298;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s, transform 0.3s, box-shadow 0.3s;
+        }
+
+        .btn:hover {
+            background: #1e3c72;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .medication-list,
+        .health-metrics,
+        .admin-users,
+        .forum {
+            margin-top: 30px;
+        }
+
+        .medication-item,
+        .metric-item,
+        .user-item,
+        .forum-post {
+            background: #f7faff;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .medication-item:hover,
+        .forum-post:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .calendar {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 10px;
+            margin-top: 30px;
+        }
+
+        .calendar div {
+            padding: 15px;
+            text-align: center;
+            background: #e6f0fa;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.3s, transform 0.3s;
+        }
+
+        .calendar div.med-day {
+            background: #2a5298;
+            color: white;
+            transform: scale(1.05);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 700px;
+            width: 90%;
+            animation: zoomIn 0.4s ease;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        @keyframes zoomIn {
+            from { transform: scale(0.7); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .dark-mode {
+            background: #121212;
+            color: #e0e0e0;
+        }
+
+        .dark-mode .section,
+        .dark-mode .modal-content {
+            background: #1e1e1e;
+        }
+
+        .dark-mode .medication-item,
+        .dark-mode .metric-item,
+        .dark-mode .user-item,
+        .dark-mode .forum-post {
+            background: #2c2c2c;
+        }
+
+        .chart-container {
+            max-width: 800px;
+            margin: 30px 0;
+            background: #fff;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .slideshow {
+            position: relative;
+            max-width: 800px;
+            margin: 30px auto;
+            overflow: hidden;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .slide {
+            display: none;
+            width: 100%;
+        }
+
+        .slide.active {
+            display: block;
+            animation: fade 1.5s ease;
+        }
+
+        .slide img {
+            width: 100%;
+            height: 250px;
+            object-fit: cover;
+            border-radius: 12px;
+        }
+
+        .slide-caption {
+            position: absolute;
+            bottom: 15px;
+            left: 15px;
+            color: white;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        @keyframes fade {
+            from { opacity: 0.4; }
+            to { opacity: 1; }
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #e6f0fa, #c3e0ff);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            transition: transform 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .welcome-animation {
+            text-align: center;
+            margin: 20px 0;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        @media (max-width: 768px) {
+            .nav {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .nav button {
+                margin: 10px 0;
+                width: 100%;
+            }
+
+            .calendar {
+                grid-template-columns: repeat(4, 1fr);
+            }
+
+            .stats {
+                grid-template-columns: 1fr;
+            }
+
+            .slideshow img {
+                height: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 id="appTitle">Medication Reminder & Health Tracker</h1>
+            <div>
+                <select id="language" onchange="changeLanguage()">
+                    <option value="en">English</option>
+                    <option value="hi">Hindi</option>
+                    <option value="te">Telugu</option>
+                </select>
+                <button id="toggleDarkMode" class="btn">Toggle Dark Mode</button>
+                <button id="logout" class="btn" style="display:none;" onclick="showLogoutModal()">Logout</button>
+            </div>
+        </div>
+
+        <div id="welcome" class="welcome-animation" style="display:none;">
+            <h2>Welcome, <span id="userName">User</span>! 🌟 Your Health Journey Awaits!</h2>
+        </div>
+
+        <div class="nav">
+            <button data-section="login" class="active" aria-label="Login">Login</button>
+            <button data-section="medication" disabled aria-label="Medication">Medication</button>
+            <button data-section="health" disabled aria-label="Health Metrics">Health Metrics</button>
+            <button data-section="reports" disabled aria-label="Reports">Reports</button>
+            <button data-section="forum" disabled aria-label="Community Forum">Community Forum</button>
+            <button data-section="admin" disabled aria-label="Admin Panel">Admin Panel</button>
+            <button data-section="assistant" disabled aria-label="AI Assistant">AI Assistant</button>
+        </div>
+
+        <!-- Login Section -->
+        <div id="login" class="section active">
+            <h2 id="loginTitle">Login</h2>
+            <div class="form-group">
+                <label for="email">Email/Mobile</label>
+                <input type="text" id="email" placeholder="Enter email or mobile" aria-label="Email or Mobile">
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" placeholder="Enter password" aria-label="Password">
+            </div>
+            <div class="form-group">
+                <label for="role">Role</label>
+                <select id="role" aria-label="User Role">
+                    <option value="user">User</option>
+                    <option value="admin">Admin</option>
+                </select>
+            </div>
+            <button class="btn" onclick="show2FAModal()">Login with OTP</button>
+            <button class="btn" onclick="simulateBiometric()">Login with Biometric</button>
+            <button class="btn" onclick="simulateSSO()">Login with SSO</button>
+        </div>
+
+        <!-- Medication Management Section -->
+        <div id="medication" class="section">
+            <div class="stats">
+                <div class="stat-card">Streak: <span id="streak">0</span> days 🔥</div>
+                <div class="stat-card">Points: <span id="points">0</span> 🏆</div>
+                <div class="stat-card">Health Score: <span id="healthScore">0</span> 🌟</div>
+            </div>
+            <div class="slideshow">
+                <div class="slide"><img src="https://via.placeholder.com/800x250?text=Stay+Hydrated" alt="Health Tip"><div class="slide-caption">Stay Hydrated: Drink 8 glasses daily!</div></div>
+                <div class="slide"><img src="https://via.placeholder.com/800x250?text=Healthy+Diet" alt="Health Tip"><div class="slide-caption">Eat Balanced: Include greens!</div></div>
+                <div class="slide"><img src="https://via.placeholder.com/800x250?text=Exercise" alt="Health Tip"><div class="slide-caption">Move Daily: 30 mins exercise!</div></div>
+            </div>
+            <h2 id="medTitle">Add Medication</h2>
+            <div class="form-group">
+                <label for="medName">Medication Name</label>
+                <input type="text" id="medName" placeholder="Enter or use voice/camera" oninput="validateInput(this)" aria-label="Medication Name">
+                <button class="btn" onclick="startVoiceInput()">🎙️ Voice Input</button>
+                <button class="btn" onclick="identifyPill()">📷 Identify Pill</button>
+            </div>
+            <div class="form-group">
+                <label for="dose">Dose (AI Suggestion: <span id="doseSuggestion">N/A</span>)</label>
+                <input type="text" id="dose" placeholder="e.g., 1 tablet" oninput="validateInput(this)" aria-label="Dose">
+            </div>
+            <div class="form-group">
+                <label for="time">Time</label>
+                <input type="time" id="time" aria-label="Time">
+            </div>
+            <div class="form-group">
+                <label for="frequency">Frequency</label>
+                <select id="frequency" aria-label="Frequency">
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="pillColor">Pill Color</label>
+                <select id="pillColor" aria-label="Pill Color">
+                    <option value="white">White</option>
+                    <option value="blue">Blue</option>
+                    <option value="red">Red</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="prescription">Prescription Image</label>
+                <input type="file" id="prescription" accept="image/*" capture="camera" aria-label="Prescription Image">
+            </div>
+            <div class="form-group">
+                <label for="locationReminder">Location-Based Reminder</label>
+                <select id="locationReminder" aria-label="Location Reminder">
+                    <option value="none">None</option>
+                    <option value="home">Home</option>
+                    <option value="work">Work</option>
+                </select>
+            </div>
+            <button class="btn" onclick="addMedication()">Add Medication</button>
+            <button class="btn" onclick="speakReminder()">Voice Reminder</button>
+            <button class="btn" onclick="viewARPill()">AR Pill View</button>
+            <button class="btn" onclick="checkPharmacy()">Check Pharmacy Prices</button>
+            <button class="btn" onclick="predictAdherence()">Predict Adherence</button>
+            <div class="medication-list" id="medicationList"></div>
+            <h3 id="calendarTitle">Monthly Calendar</h3>
+            <div class="calendar" id="calendar"></div>
+        </div>
+
+        <!-- Health Metrics Section -->
+        <div id="health" class="section">
+            <h2 id="healthTitle">Health Metrics</h2>
+            <div class="stats">
+                <div class="stat-card">Wellness Score: <span id="wellnessScore">0</span> 🌟</div>
+                <div class="stat-card">Risk Level: <span id="riskLevel">Low</span> 🛡️</div>
+            </div>
+            <div class="form-group">
+                <label for="bloodPressure">Blood Pressure</label>
+                <input type="text" id="bloodPressure" placeholder="e.g., 120/80" oninput="validateInput(this)" aria-label="Blood Pressure">
+            </div>
+            <div class="form-group">
+                <label for="sugarLevel">Sugar Level</label>
+                <input type="text" id="sugarLevel" placeholder="e.g., 100 mg/dL" oninput="validateInput(this)" aria-label="Sugar Level">
+            </div>
+            <div class="form-group">
+                <label for="weight">Weight</label>
+                <input type="text" id="weight" placeholder="e.g., 70 kg" oninput="validateInput(this)" aria-label="Weight">
+            </div>
+            <div class="form-group">
+                <label for="steps">Steps (Wearable)</label>
+                <input type="number" id="steps" placeholder="e.g., 10000" value="0" readonly aria-label="Steps">
+            </div>
+            <div class="form-group">
+                <label for="heartRate">Heart Rate (Wearable)</label>
+                <input type="number" id="heartRate" placeholder="e.g., 70 bpm" value="0" readonly aria-label="Heart Rate">
+            </div>
+            <div class="form-group">
+                <label for="sleep">Sleep Hours (Wearable)</label>
+                <input type="number" id="sleep" placeholder="e.g., 7" value="0" readonly aria-label="Sleep Hours">
+            </div>
+            <button class="btn" onclick="addMetric()">Add Metric</button>
+            <button class="btn" onclick="streamWearable()">Stream Wearable Data</button>
+            <button class="btn" onclick="exportEncryptedMetrics()">Export Encrypted PDF</button>
+            <button class="btn" onclick="predictHealthRisks()">Predict Health Risks</button>
+            <div class="chart-container">
+                <canvas id="metricsChart"></canvas>
+            </div>
+            <div class="health-metrics" id="metricsList"></div>
+            <div id="healthInsights"></div>
+        </div>
+
+        <!-- Reports Section -->
+        <div id="reports" class="section">
+            <h2 id="reportsTitle">Reports</h2>
+            <p id="reportsDesc">Generate, sync, or share your health reports securely.</p>
+            <select id="reportTemplate" aria-label="Report Template">
+                <option value="full">Full Report</option>
+                <option value="medication">Medication Only</option>
+                <option value="metrics">Metrics Only</option>
+            </select>
+            <button class="btn" onclick="downloadReport()">Download Report</button>
+            <button class="btn" onclick="syncReport()">Sync to Cloud</button>
+            <button class="btn" onclick="viewPrintableReport()">View Printable</button>
+            <button class="btn" onclick="shareFHIR()">Share via FHIR</button>
+        </div>
+
+        <!-- Community Forum Section -->
+        <div id="forum" class="section">
+            <h2 id="forumTitle">Community Forum</h2>
+            <div class="form-group">
+                <label for="postContent">Share Your Thoughts</label>
+                <textarea id="postContent" placeholder="Write your post..." aria-label="Forum Post"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="postTags">Tags</label>
+                <input type="text" id="postTags" placeholder="e.g., diabetes, fitness" aria-label="Post Tags">
+            </div>
+            <button class="btn" onclick="addPost()">Post</button>
+            <button class="btn" onclick="startLiveChat()">Start Live Chat</button>
+            <div class="forum" id="forumPosts"></div>
+        </div>
+
+        <!-- Admin Panel Section -->
+        <div id="admin" class="section">
+            <h2 id="adminTitle">Admin Panel</h2>
+            <div class="form-group">
+                <label for="userFilter">Filter Users</label>
+                <input type="text" id="userFilter" placeholder="Search by name" oninput="filterUsers()" aria-label="User Filter">
+            </div>
+            <button class="btn" onclick="bulkAction()">Bulk Approve/Ban</button>
+            <button class="btn" onclick="exportAuditLogs()">Export Audit Logs</button>
+            <button class="btn" onclick="analyzeUserBehavior()">Analyze Behavior</button>
+            <div class="admin-users" id="userList"></div>
+            <div class="chart-container">
+                <canvas id="adminChart"></canvas>
+            </div>
+            <div id="activityLogs"></div>
+        </div>
+
+        <!-- AI Assistant Section -->
+        <div id="assistant" class="section">
+            <h2 id="assistantTitle">AI Health Assistant</h2>
+            <div class="form-group">
+                <label for="assistantQuery">Ask a Health Question</label>
+                <textarea id="assistantQuery" placeholder="e.g., What foods lower blood pressure?" aria-label="Health Query"></textarea>
+            </div>
+            <button class="btn" onclick="askAssistant()">Ask Now</button>
+            <button class="btn" onclick="voiceAssistant()">Voice Command</button>
+            <div id="assistantResponse"></div>
+        </div>
+
+        <!-- Modal -->
+        <div id="modal" class="modal">
+            <div class="modal-content">
+                <h3 id="modalTitle">Action</h3>
+                <p id="modalMessage"></p>
+                <div id="modalActions">
+                    <button class="btn" onclick="closeModal()">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let isLoggedIn = false;
+        let userRole = 'user';
+        let userEmail = '';
+        let userName = 'User';
+        let medications = [];
+        let metrics = [];
+        let users = [{ id: 1, name: 'John Doe', missedDoses: 2, role: 'user', status: 'active', logs: [], subscription: 'free' }];
+        let posts = [];
+        let chartInstance = null;
+        let adminChartInstance = null;
+        let streak = 0;
+        let points = 0;
+        let wellnessScore = 0;
+        let healthScore = 0;
+        let riskLevel = 'Low';
+        let subscriptionTier = 'free';
+
+        // IndexedDB Setup with Compression
+        let db;
+        const request = indexedDB.open('HealthTrackerDB', 3);
+        request.onupgradeneeded = (event) => {
+            db = event.target.result;
+            db.createObjectStore('medications', { keyPath: 'id', autoIncrement: true });
+            db.createObjectStore('metrics', { keyPath: 'id', autoIncrement: true });
+            db.createObjectStore('posts', { keyPath: 'id', autoIncrement: true });
+            db.createObjectStore('users', { keyPath: 'id' });
+        };
+        request.onsuccess = (event) => {
+            db = event.target.result;
+            loadData();
+        };
+
+        function loadData() {
+            const tx = db.transaction(['medications', 'metrics', 'posts', 'users'], 'readonly');
+            tx.objectStore('medications').getAll().onsuccess = (e) => { medications = decompressData(e.target.result); renderMedications(); };
+            tx.objectStore('metrics').getAll().onsuccess = (e) => { metrics = decompressData(e.target.result); renderMetrics(); updateChart(); };
+            tx.objectStore('posts').getAll().onsuccess = (e) => { posts = decompressData(e.target.result); renderPosts(); };
+            tx.objectStore('users').getAll().onsuccess = (e) => { users = decompressData(e.target.result); renderUsers(); };
+        }
+
+        // Mock Data Compression
+        function compressData(data) {
+            return JSON.stringify(data); // Placeholder for real compression
+        }
+
+        function decompressData(data) {
+            return data; // Placeholder for real decompression
+        }
+
+        // Language Support
+        const translations = {
+            en: {
+                appTitle: 'Medication Reminder & Health Tracker',
+                loginTitle: 'Login',
+                medTitle: 'Add Medication',
+                calendarTitle: 'Monthly Calendar',
+                healthTitle: 'Health Metrics',
+                reportsTitle: 'Reports',
+                reportsDesc: 'Generate, sync, or share your health reports securely.',
+                forumTitle: 'Community Forum',
+                adminTitle: 'Admin Panel',
+                assistantTitle: 'AI Health Assistant',
+                modalTitle: 'Action'
+            },
+            hi: {
+                appTitle: 'दवा अनुस्मारक और स्वास्थ्य ट्रैकर',
+                loginTitle: 'लॉगिन',
+                medTitle: 'दवा जोड़ें',
+                calendarTitle: 'मासिक कैलेंडर',
+                healthTitle: 'स्वास्थ्य मेट्रिक्स',
+                reportsTitle: 'रिपोर्ट',
+                reportsDesc: 'अपनी स्वास्थ्य रिपोर्ट सुरक्षित रूप से बनाएं, सिंक करें या साझा करें।',
+                forumTitle: 'समुदाय मंच',
+                adminTitle: 'प्रशासन पैनल',
+                assistantTitle: 'एआई स्वास्थ्य सहायक',
+                modalTitle: 'कार्रवाई'
+            },
+            te: {
+                appTitle: 'మందుల రిమైండర్ & ఆరోగ్య ట్రాకర్',
+                loginTitle: 'లాగిన్',
+                medTitle: 'మందు జోడించు',
+                calendarTitle: 'నెలవారీ క్యాలెండర్',
+                healthTitle: 'ఆరోగ్య మెట్రిక్స్',
+                reportsTitle: 'రిపోర్టులు',
+                reportsDesc: 'మీ ఆరోగ్య రిపోర్టులను సురక్షితంగా సృష్టించండి, సింక్ చేయండి లేదా షేర్ చేయండి.',
+                forumTitle: 'సంఘం ఫోరం',
+                adminTitle: 'అడ్మిన్ ప్యానెల్',
+                assistantTitle: 'ఏఐ ఆరోగ్య సహాయకుడు',
+                modalTitle: 'చర్య'
+            }
+        };
+
+        function changeLanguage() {
+            const lang = document.getElementById('language').value;
+            localStorage.setItem('language', lang);
+            document.getElementById('appTitle').textContent = translations[lang].appTitle;
+            document.getElementById('loginTitle').textContent = translations[lang].loginTitle;
+            document.getElementById('medTitle').textContent = translations[lang].medTitle;
+            document.getElementById('calendarTitle').textContent = translations[lang].calendarTitle;
+            document.getElementById('healthTitle').textContent = translations[lang].healthTitle;
+            document.getElementById('reportsTitle').textContent = translations[lang].reportsTitle;
+            document.getElementById('reportsDesc').textContent = translations[lang].reportsDesc;
+            document.getElementById('forumTitle').textContent = translations[lang].forumTitle;
+            document.getElementById('adminTitle').textContent = translations[lang].adminTitle;
+            document.getElementById('assistantTitle').textContent = translations[lang].assistantTitle;
+            speakTranslation(`Language changed to ${lang === 'en' ? 'English' : lang === 'hi' ? 'Hindi' : 'Telugu'}`);
+        }
+
+        // Navigation
+        const navButtons = document.querySelectorAll('.nav button');
+        const sections = document.querySelectorAll('.section');
+
+        function updateNavigation() {
+            navButtons.forEach(button => {
+                const section = button.dataset.section;
+                button.disabled = !isLoggedIn || (section === 'admin' && userRole !== 'admin') || (section === 'login' && isLoggedIn);
+                button.classList.remove('active');
+            });
+            sections.forEach(section => section.classList.remove('active'));
+            document.getElementById('logout').style.display = isLoggedIn ? 'inline-block' : 'none';
+            document.getElementById('welcome').style.display = isLoggedIn ? 'block' : 'none';
+
+            if (isLoggedIn) {
+                document.getElementById('medication').classList.add('active');
+                navButtons.forEach(btn => { if (btn.dataset.section === 'medication') btn.classList.add('active'); });
+            } else {
+                document.getElementById('login').classList.add('active');
+                navButtons.forEach(btn => { if (btn.dataset.section === 'login') btn.classList.add('active'); });
+            }
+        }
+
+        navButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                if (!button.disabled) {
+                    navButtons.forEach(btn => btn.classList.remove('active'));
+                    sections.forEach(section => section.classList.remove('active'));
+                    button.classList.add('active');
+                    document.getElementById(button.dataset.section).classList.add('active');
+                }
+            });
+        });
+
+        // Dark Mode and High Contrast
+        if (localStorage.getItem('darkMode') === 'true') {
+            document.body.classList.add('dark-mode');
+        }
+        document.getElementById('toggleDarkMode').addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+            localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
+            speakTranslation('Dark mode toggled');
+        });
+
+        // Modal with Voice Narration
+        function showModal(message, actions = [{ label: 'Close', action: closeModal }], narrate = true) {
+            document.getElementById('modalMessage').textContent = message;
+            const actionsDiv = document.getElementById('modalActions');
+            actionsDiv.innerHTML = '';
+            actions.forEach(({ label, action }) => {
+                const btn = document.createElement('button');
+                btn.className = 'btn';
+                btn.textContent = label;
+                btn.onclick = () => {
+                    action();
+                    simulateHapticFeedback();
+                };
+                btn.setAttribute('aria-label', label);
+                actionsDiv.appendChild(btn);
+            });
+            document.getElementById('modal').style.display = 'flex';
+            if (narrate && 'speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(message);
+                utterance.lang = document.getElementById('language').value === 'hi' ? 'hi-IN' : document.getElementById('language').value === 'te' ? 'te-IN' : 'en-US';
+                speechSynthesis.speak(utterance);
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('modal').style.display = 'none';
+            simulateHapticFeedback();
+        }
+
+        function simulateHapticFeedback() {
+            if ('vibrate' in navigator) {
+                navigator.vibrate(50); // Short vibration for feedback
+            }
+        }
+
+        // Logout with Session Timeout
+        function showLogoutModal() {
+            showModal('Are you sure you want to logout? This will invalidate sessions on all devices.', [
+                { label: 'Logout', action: logout },
+                { label: 'Cancel', action: closeModal }
+            ]);
+        }
+
+        function logout() {
+            isLoggedIn = false;
+            userRole = 'user';
+            userEmail = '';
+            userName = 'User';
+            subscriptionTier = 'free';
+            localStorage.removeItem('isLoggedIn');
+            localStorage.removeItem('userRole');
+            localStorage.removeItem('userEmail');
+            localStorage.removeItem('userName');
+            showModal('Logged out successfully. All sessions invalidated. 👋');
+            updateNavigation();
+            simulateMultiDeviceLogout();
+        }
+
+        function simulateMultiDeviceLogout() {
+            showModal('Mock: Sessions invalidated on all devices via blockchain ledger.');
+        }
+
+        // Session Timeout Alert
+        function startSessionTimeout() {
+            setTimeout(() => {
+                showModal('Session expiring in 1 minute. Extend session?', [
+                    { label: 'Extend', action: startSessionTimeout },
+                    { label: 'Logout', action: logout }
+                ]);
+            }, 29 * 60 * 1000); // Warn after 29 minutes
+            setTimeout(logout, 30 * 60 * 1000); // Auto-logout after 30 minutes
+        }
+
+        // Login with Biometric and SSO
+        function show2FAModal() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const role = document.getElementById('role').value;
+
+            if (email && password) {
+                userEmail = email;
+                userName = email.split('@')[0];
+                let timeLeft = 30;
+                const timer = setInterval(() => {
+                    document.getElementById('modalMessage').innerHTML = `Enter OTP sent to your email (Expires in ${timeLeft}s)`;
+                    timeLeft--;
+                    if (timeLeft < 0) {
+                        clearInterval(timer);
+                        showModal('OTP expired. Please try again.');
+                    }
+                }, 1000);
+                showModal(`Enter OTP sent to your email (Expires in ${timeLeft}s)`, [
+                    {
+                        label: 'Verify', action: () => {
+                            clearInterval(timer);
+                            verifyOTP(email, password, role);
+                        }
+                    },
+                    { label: 'Cancel', action: () => { clearInterval(timer); closeModal(); } }
+                ]);
+            } else {
+                showModal('Please fill in all fields.');
+            }
+        }
+
+        function simulateBiometric() {
+            const email = document.getElementById('email').value;
+            const role = document.getElementById('role').value;
+            if (email) {
+                showModal('Biometric authentication successful! (Mock Fingerprint)', [
+                    {
+                        label: 'Continue', action: () => verifyOTP(email, 'biometric', role)
+                    }
+                ]);
+            } else {
+                showModal('Please enter email.');
+            }
+        }
+
+        function simulateSSO() {
+            const email = document.getElementById('email').value;
+            const role = document.getElementById('role').value;
+            if (email) {
+                showModal('SSO authentication successful! (Mock Google SSO)', [
+                    {
+                        label: 'Continue', action: () => verifyOTP(email, 'sso', role)
+                    }
+                ]);
+            } else {
+                showModal('Please enter email.');
+            }
+        }
+
+        function verifyOTP(email, password, role) {
+            isLoggedIn = true;
+            userRole = role;
+            userEmail = email;
+            subscriptionTier = role === 'admin' ? 'premium' : 'free';
+            localStorage.setItem('isLoggedIn', 'true');
+            localStorage.setItem('userRole', role);
+            localStorage.setItem('userEmail', email);
+            localStorage.setItem('userName', userName);
+            document.getElementById('userName').textContent = userName;
+            showModal(`Welcome, ${role === 'admin' ? 'Admin' : 'User'} ${userName}! 🎉`);
+            updateNavigation();
+            startSessionTimeout();
+            logUserActivity(`Logged in as ${role} via ${password === 'biometric' ? 'biometric' : password === 'sso' ? 'SSO' : 'OTP'}`);
+            checkSubscription();
+        }
+
+        function checkSubscription() {
+            if (subscriptionTier === 'free') {
+                showModal('You are on the free tier. Upgrade to premium for advanced analytics and telehealth!', [
+                    { label: 'Upgrade', action: () => simulateUpgrade() },
+                    { label: 'Continue', action: closeModal }
+                ]);
+            }
+        }
+
+        function simulateUpgrade() {
+            subscriptionTier = 'premium';
+            users.find(u => u.id === 1).subscription = 'premium';
+            showModal('Upgraded to Premium! Unlocked advanced analytics and telehealth. 🎉');
+            logUserActivity('Upgraded to premium tier');
+        }
+
+        // Input Validation
+        function validateInput(input) {
+            input.style.borderColor = input.value ? '#2a5298' : '#e0e7ff';
+        }
+
+        // Medication Management
+        function addMedication() {
+            const name = document.getElementById('medName').value;
+            const dose = document.getElementById('dose').value;
+            const time = document.getElementById('time').value;
+            const frequency = document.getElementById('frequency').value;
+            const color = document.getElementById('pillColor').value;
+            const prescription = document.getElementById('prescription').files[0];
+            const location = document.getElementById('locationReminder').value;
+
+            if (name && dose && time) {
+                const med = {
+                    id: Date.now(),
+                    name, dose, time, frequency, color, missed: 0,
+                    prescription: prescription ? URL.createObjectURL(prescription) : null,
+                    location,
+                    blockchainHash: simulateBlockchainHash(name + dose + time)
+                };
+                checkConflicts(med).then(() => {
+                    suggestDosage(med);
+                    const tx = db.transaction('medications', 'readwrite');
+                    tx.objectStore('medications').add(med);
+                    medications.push(med);
+                    renderMedications();
+                    showModal(`Reminder set for ${name} at ${time} ${location !== 'none' ? `at ${location}` : ''} 🔔`);
+                    cacheNotification(`Take ${name} at ${time} ${location !== 'none' ? `at ${location}` : ''}`);
+                    streak++;
+                    points += 10;
+                    updateStats();
+                    logUserActivity(`Added medication: ${name}`);
+                    checkLocationReminder(med);
+                }).catch(conflict => showModal(`Warning: ${conflict}`));
+            } else {
+                showModal('Please fill in all required fields.');
+            }
+        }
+
+        function simulateBlockchainHash(data) {
+            return `hash_${btoa(data).slice(0, 10)}`; // Mock hash
+        }
+
+        function checkConflicts(med) {
+            return new Promise((resolve, reject) => {
+                const conflicts = {
+                    'Aspirin': ['Ibuprofen'],
+                    'Ibuprofen': ['Aspirin']
+                };
+                const conflict = medications.find(m => conflicts[med.name]?.includes(m.name));
+                if (conflict) {
+                    reject(`Potential conflict between ${med.name} and ${conflict.name}. Consult your doctor.`);
+                } else {
+                    resolve();
+                }
+            });
+        }
+
+        function suggestDosage(med) {
+            const suggestions = {
+                'Aspirin': '1 tablet daily',
+                'Ibuprofen': '2 tablets every 6 hours'
+            };
+            document.getElementById('doseSuggestion').textContent = suggestions[med.name] || 'Consult doctor';
+        }
+
+        function identifyPill() {
+            const file = document.getElementById('prescription').files[0];
+            if (file) {
+                showModal('Pill identified: Aspirin (Mock AI OCR)');
+                document.getElementById('medName').value = 'Aspirin';
+                validateInput(document.getElementById('medName'));
+            } else {
+                showModal('Please capture a pill image.');
+            }
+        }
+
+        function checkLocationReminder(med) {
+            if (med.location !== 'none' && 'geolocation' in navigator) {
+                navigator.geolocation.getCurrentPosition(pos => {
+                    const userLocation = `${pos.coords.latitude},${pos.coords.longitude}`;
+                    showModal(`Location-based reminder set for ${med.name} at ${med.location} (Mock: ${userLocation})`);
+                }, () => {
+                    showModal('Location access denied. Reminder set without location.');
+                });
+            }
+        }
+
+        function predictAdherence() {
+            if (subscriptionTier === 'premium') {
+                const adherence = medications.length > 0 ? Math.round(100 - (medications.reduce((sum, m) => sum + m.missed, 0) / medications.length) * 100) : 100;
+                showModal(`AI Prediction: Your adherence rate is ${adherence}%. Keep up the streak to stay healthy!`);
+            } else {
+                showModal('Adherence prediction is a premium feature. Upgrade now!', [
+                    { label: 'Upgrade', action: simulateUpgrade },
+                    { label: 'Cancel', action: closeModal }
+                ]);
+            }
+        }
+
+        function renderMedications() {
+            const list = document.getElementById('medicationList');
+            list.innerHTML = '';
+            medications.forEach((med, index) => {
+                const item = document.createElement('div');
+                item.className = 'medication-item';
+                item.innerHTML = `
+                    ${med.name} - ${med.dose} (${med.color}) at ${med.time} (${med.frequency}) | Missed: ${med.missed}
+                    ${med.location !== 'none' ? ` | Location: ${med.location}` : ''}
+                    ${med.prescription ? `<img src="${med.prescription}" style="width:60px; border-radius:8px;" alt="Prescription" loading="lazy">` : ''}
+                    <div>
+                        <button onclick="takeMedication(${index})">Take Now</button>
+                        <button onclick="snoozeMedication(${index})">Snooze</button>
+                    </div>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        function takeMedication(index) {
+            showModal(`Marked ${medications[index].name} as taken! ✅`);
+            streak++;
+            points += 20;
+            updateStats();
+            logUserActivity(`Took medication: ${medications[index].name}`);
+            checkLeaderboard();
+        }
+
+        function snoozeMedication(index) {
+            medications[index].missed++;
+            streak = 0;
+            const tx = db.transaction('medications', 'readwrite');
+            tx.objectStore('medications').put(medications[index]);
+            renderMedications();
+            showModal(`Snoozed ${medications[index].name}. Reminder in 10 minutes.`);
+            cacheNotification(`Take ${medications[index].name} now`, 10 * 60 * 1000);
+            logUserActivity(`Snoozed medication: ${medications[index].name}`);
+        }
+
+        function speakReminder() {
+            if ('speechSynthesis' in window) {
+                const med = medications[medications.length - 1];
+                if (med) {
+                    const utterance = new SpeechSynthesisUtterance(`Time to take ${med.name}, ${med.dose} at ${med.time}${med.location !== 'none' ? ` at ${med.location}` : ''}`);
+                    utterance.lang = document.getElementById('language').value === 'hi' ? 'hi-IN' : document.getElementById('language').value === 'te' ? 'te-IN' : 'en-US';
+                    utterance.volume = 1;
+                    speechSynthesis.speak(utterance);
+                    new Audio('https://www.soundjay.com/buttons/beep-01a.mp3').play().catch(() => showModal('Custom sound not supported offline.'));
+                } else {
+                    showModal('No medications to remind.');
+                }
+            } else {
+                showModal('Voice reminders not supported.');
+            }
+        }
+
+        function startVoiceInput() {
+            if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                const recognition = new SpeechRecognition();
+                recognition.lang = document.getElementById('language').value === 'hi' ? 'hi-IN' : document.getElementById('language').value === 'te' ? 'te-IN' : 'en-US';
+                recognition.onresult = (event) => {
+                    document.getElementById('medName').value = event.results[0][0].transcript;
+                    validateInput(document.getElementById('medName'));
+                    suggestDosage({ name: event.results[0][0].transcript });
+                };
+                recognition.start();
+            } else {
+                showModal('Voice input not supported.');
+            }
+        }
+
+        function viewARPill() {
+            showModal('AR Pill View: Rotate pill in 3D space (Mock WebXR)', [
+                { label: 'Rotate', action: () => showModal('Pill rotated 360° (Mock)') },
+                { label: 'Close', action: closeModal }
+            ]);
+        }
+
+        function checkPharmacy() {
+            showModal('Fetching prices: Aspirin - $5, Ibuprofen - $7 (Mock API)');
+        }
+
+        function checkLeaderboard() {
+            if (points >= 200) {
+                showModal('🎉 You’re #1 on the leaderboard! Keep it up!');
+            }
+        }
+
+        function updateStats() {
+            document.getElementById('streak').textContent = streak;
+            document.getElementById('points').textContent = points;
+            document.getElementById('wellnessScore').textContent = wellnessScore;
+            document.getElementById('healthScore').textContent = healthScore;
+            document.getElementById('riskLevel').textContent = riskLevel;
+            if (points >= 100) {
+                showModal('🎉 Earned "Health Hero" badge!');
+            }
+        }
+
+        // Calendar
+        function renderCalendar() {
+            const calendar = document.getElementById('calendar');
+            calendar.innerHTML = '';
+            const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            days.forEach(day => {
+                const div = document.createElement('div');
+                div.textContent = day;
+                calendar.appendChild(div);
+            });
+            for (let i = 1; i <= 31; i++) {
+                const div = document.createElement('div');
+                div.textContent = i;
+                if (medications.some(med => med.time.includes(':'))) {
+                    div.classList.add('med-day');
+                }
+                div.addEventListener('click', () => showModal(`Day ${i} Medications: ${medications.map(m => m.name).join(', ') || 'None'}`));
+                calendar.appendChild(div);
+            }
+        }
+
+        // Health Metrics
+        function addMetric() {
+            const bp = document.getElementById('bloodPressure').value;
+            const sugar = document.getElementById('sugarLevel').value;
+            const weight = document.getElementById('weight').value;
+            const steps = document.getElementById('steps').value;
+            const heartRate = document.getElementById('heartRate').value;
+            const sleep = document.getElementById('sleep').value;
+
+            if (bp || sugar || weight || steps || heartRate || sleep) {
+                const metric = {
+                    id: Date.now(),
+                    bp, sugar, weight, steps, heartRate, sleep,
+                    date: new Date().toLocaleDateString(),
+                    blockchainHash: simulateBlockchainHash(bp + sugar + weight)
+                };
+                const tx = db.transaction('metrics', 'readwrite');
+                tx.objectStore('metrics').add(metric);
+                metrics.push(metric);
+                renderMetrics();
+                updateChart();
+                calculateWellnessScore();
+                predictHealthRisks();
+                points += 15;
+                updateStats();
+                logUserActivity('Added health metric');
+            } else {
+                showModal('Please fill in at least one field.');
+            }
+        }
+
+        function renderMetrics() {
+            const list = document.getElementById('metricsList');
+            list.innerHTML = '';
+            metrics.forEach(metric => {
+                const item = document.createElement('div');
+                item.className = 'metric-item';
+                item.innerHTML = `
+                    ${metric.date}: BP: ${metric.bp || 'N/A'}, Sugar: ${metric.sugar || 'N/A'}, 
+                    Weight: ${metric.weight || 'N/A'}, Steps: ${metric.steps || 'N/A'}, 
+                    HR: ${metric.heartRate || 'N/A'}, Sleep: ${metric.sleep || 'N/A'}h
+                    | Secure Hash: ${metric.blockchainHash}
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        function updateChart() {
+            const ctx = document.getElementById('metricsChart').getContext('2d');
+            if (chartInstance) chartInstance.destroy();
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: metrics.map(m => m.date),
+                    datasets: [
+                        { label: 'Blood Pressure', data: metrics.map(m => m.bp ? m.bp.split('/')[0] : null), borderColor: '#1e3c72', fill: false },
+                        { label: 'Sugar Level', data: metrics.map(m => m.sugar ? m.sugar.split(' ')[0] : null), borderColor: '#2a5298', fill: false },
+                        { label: 'Weight', data: metrics.map(m => m.weight ? m.weight.split(' ')[0] : null), borderColor: '#ef5350', fill: false },
+                        { label: 'Heart Rate', data: metrics.map(m => m.heartRate || null), borderColor: '#ffd700', fill: false },
+                        { label: 'Sleep', data: metrics.map(m => m.sleep || null), borderColor: '#ab47bc', fill: false }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    scales: { y: { beginAtZero: true } },
+                    plugins: {
+                        legend: { display: true },
+                        tooltip: { enabled: true }
+                    }
+                }
+            });
+        }
+
+        function calculateWellnessScore() {
+            wellnessScore = 0;
+            healthScore = 0;
+            if (metrics.length > 0) {
+                const latest = metrics[metrics.length - 1];
+                if (latest.bp && parseInt(latest.bp.split('/')[0]) < 130) {
+                    wellnessScore += 30;
+                    healthScore += 30;
+                }
+                if (latest.sugar && parseInt(latest.sugar.split(' ')[0]) < 140) {
+                    wellnessScore += 30;
+                    healthScore += 30;
+                }
+                if (latest.steps > 8000) {
+                    wellnessScore += 20;
+                    healthScore += 20;
+                }
+                if (latest.sleep > 6) {
+                    wellnessScore += 20;
+                    healthScore += 20;
+                }
+            }
+            updateStats();
+        }
+
+        function predictHealthRisks() {
+            if (subscriptionTier === 'premium') {
+                const highBP = metrics.some(m => m.bp && parseInt(m.bp.split('/')[0]) > 140);
+                const highSugar = metrics.some(m => m.sugar && parseInt(m.sugar.split(' ')[0]) > 180);
+                const lowSleep = metrics.some(m => m.sleep && m.sleep < 5);
+                riskLevel = highBP || highSugar || lowSleep ? 'High' : 'Low';
+                document.getElementById('healthInsights').innerHTML = `
+                    <h3>AI Health Insights</h3>
+                    ${highBP ? '<p>⚠️ High blood pressure detected. Consult a doctor.</p>' : ''}
+                    ${highSugar ? '<p>⚠️ High sugar levels detected. Monitor diet.</p>' : ''}
+                    ${lowSleep ? '<p>⚠️ Low sleep detected. Aim for 7-8 hours.</p>' : ''}
+                    <p>Personalized goal: Walk 10,000 steps daily.</p>
+                `;
+                updateStats();
+            } else {
+                showModal('Health risk prediction is a premium feature. Upgrade now!', [
+                    { label: 'Upgrade', action: simulateUpgrade },
+                    { label: 'Cancel', action: closeModal }
+                ]);
+            }
+        }
+
+        function streamWearable() {
+            const steps = Math.floor(Math.random() * 10000) + 5000;
+            const heartRate = Math.floor(Math.random() * 40) + 60;
+            const sleep = Math.floor(Math.random() * 3) + 6;
+            document.getElementById('steps').value = steps;
+            document.getElementById('heartRate').value = heartRate;
+            document.getElementById('sleep').value = sleep;
+            showModal(`Live stream: ${steps} steps, ${heartRate} bpm, ${sleep} hours of sleep (Mock Fitbit API)`);
+            logUserActivity('Streamed wearable data');
+        }
+
+        function exportEncryptedMetrics() {
+            if (subscriptionTier === 'premium') {
+                showModal('Metrics exported as encrypted PDF (Mock AES-256)');
+            } else {
+                showModal('Encrypted PDF export is a premium feature. Upgrade now!', [
+                    { label: 'Upgrade', action: simulateUpgrade },
+                    { label: 'Cancel', action: closeModal }
+                ]);
+            }
+        }
+
+        // Reports
+        function downloadReport() {
+            const template = document.getElementById('reportTemplate').value;
+            let data = { blockchainVerified: true };
+            if (template === 'full' || template === 'medication') data.medications = medications;
+            if (template === 'full' || template === 'metrics') data.metrics = metrics;
+            const blob = new Blob([compressData(data)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `health_report_${template}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showModal('Report downloaded with blockchain verification.');
+        }
+
+        function syncReport() {
+            showModal('Report synced to cloud with blockchain ledger (Mock IPFS).');
+        }
+
+        function viewPrintableReport() {
+            const template = document.getElementById('reportTemplate').value;
+            let content = '<h2>Health Report</h2><p>Blockchain Verified</p>';
+            if (template === 'full' || template === 'medication') {
+                content += '<h3>Medications</h3><ul>' + medications.map(m => `<li>${m.name} - ${m.dose} at ${m.time} (Hash: ${m.blockchainHash})</li>`).join('') + '</ul>';
+            }
+            if (template === 'full' || template === 'metrics') {
+                content += '<h3>Metrics</h3><ul>' + metrics.map(m => `<li>${m.date}: BP: ${m.bp || 'N/A'}, Sugar: ${m.sugar || 'N/A'}, Sleep: ${m.sleep || 'N/A'} (Hash: ${m.blockchainHash})</li>`).join('') + '</ul>';
+            }
+            const win = window.open('');
+            win.document.write(`<html><body>${content}<style>body{font-family:Arial;padding:20px;}</style></body></html>`);
+            win.print();
+        }
+
+        function shareFHIR() {
+            if (subscriptionTier === 'premium') {
+                showModal('Report shared via FHIR-compliant API (Mock HL7 FHIR)');
+            } else {
+                showModal('FHIR sharing is a premium feature. Upgrade now!', [
+                    { label: 'Upgrade', action: simulateUpgrade },
+                    { label: 'Cancel', action: closeModal }
+                ]);
+            }
+        }
+
+        // Community Forum
+        function addPost() {
+            const content = document.getElementById('postContent').value;
+            const tags = document.getElementById('postTags').value.split(',').map(t => t.trim());
+            if (content) {
+                const post = {
+                    id: Date.now(),
+                    content,
+                    tags,
+                    date: new Date().toLocaleString(),
+                    likes: 0,
+                    replies: [],
+                    pinned: false
+                };
+                const tx = db.transaction('posts', 'readwrite');
+                tx.objectStore('posts').add(post);
+                posts.push(post);
+                renderPosts();
+                document.getElementById('postContent').value = '';
+                document.getElementById('postTags').value = '';
+                points += 5;
+                updateStats();
+                logUserActivity('Posted in forum');
+            } else {
+                showModal('Please write a post.');
+            }
+        }
+
+        function renderPosts() {
+            const list = document.getElementById('forumPosts');
+            list.innerHTML = '';
+            const pinned = posts.filter(p => p.pinned);
+            const regular = posts.filter(p => !p.pinned);
+            [...pinned, ...regular].forEach((post, index) => {
+                const item = document.createElement('div');
+                item.className = 'forum-post';
+                item.innerHTML = `
+                    ${post.pinned ? '📌 ' : ''}${post.date}: ${post.content} | Likes: ${post.likes} | Tags: ${post.tags.join(', ')}
+                    <button onclick="likePost(${index})">👍 Like</button>
+                    ${userRole === 'admin' ? `<button onclick="pinPost(${index})">${post.pinned ? 'Unpin' : 'Pin'}</button>` : ''}
+                    <div style="margin-left:20px;">
+                        ${post.replies.map(r => `<p>${r}</p>`).join('')}
+                        <input id="reply${index}" placeholder="Add reply" aria-label="Reply to post">
+                        <button onclick="addReply(${index})">Reply</button>
+                    </div>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        function likePost(index) {
+            posts[index].likes++;
+            const tx = db.transaction('posts', 'readwrite');
+            tx.objectStore('posts').put(posts[index]);
+            renderPosts();
+            points += 2;
+            updateStats();
+        }
+
+        function addReply(index) {
+            const reply = document.getElementById(`reply${index}`).value;
+            if (reply) {
+                posts[index].replies.push(reply);
+                const tx = db.transaction('posts', 'readwrite');
+                tx.objectStore('posts').put(posts[index]);
+                renderPosts();
+                points += 3;
+                updateStats();
+            }
+        }
+
+        function pinPost(index) {
+            posts[index].pinned = !posts[index].pinned;
+            const tx = db.transaction('posts', 'readwrite');
+            tx.objectStore('posts').put(posts[index]);
+            renderPosts();
+            logUserActivity(`Pinned/unpinned post: ${posts[index].content.substring(0, 20)}`);
+        }
+
+        function startLiveChat() {
+            showModal('Live chat started! Connect with health experts (Mock WebSocket)');
+        }
+
+        // Admin Panel
+        function filterUsers() {
+            const filter = document.getElementById('userFilter').value.toLowerCase();
+            const filtered = users.filter(user => user.name.toLowerCase().includes(filter));
+            renderUsers(filtered);
+        }
+
+        function renderUsers(filteredUsers = users) {
+            const list = document.getElementById('userList');
+            list.innerHTML = '';
+            filteredUsers.forEach(user => {
+                const item = document.createElement('div');
+                item.className = 'user-item';
+                item.innerHTML = `
+                    ${user.name} - Missed Doses: ${user.missedDoses} ${user.missedDoses > 2 ? '⚠️' : ''} | Status: ${user.status} | Subscription: ${user.subscription}
+                    <button onclick="toggleUserStatus(${user.id}, '${user.status}')">${user.status === 'active' ? 'Ban' : 'Approve'}</button>
+                `;
+                list.appendChild(item);
+            });
+            updateAdminChart();
+            renderActivityLogs();
+        }
+
+        function toggleUserStatus(id, status) {
+            const user = users.find(u => u.id === id);
+            user.status = status === 'active' ? 'banned' : 'active';
+            user.logs.push(`${new Date().toLocaleString()}: Status changed to ${user.status}`);
+            const tx = db.transaction('users', 'readwrite');
+            tx.objectStore('users').put(user);
+            renderUsers();
+            logUserActivity(`Changed user status: ${user.name} to ${user.status}`);
+        }
+
+        function bulkAction() {
+            showModal('Select action for all users', [
+                { label: 'Approve All', action: () => bulkUpdateStatus('active') },
+                { label: 'Ban All', action: () => bulkUpdateStatus('banned') },
+                { label: 'Cancel', action: closeModal }
+            ]);
+        }
+
+        function bulkUpdateStatus(status) {
+            users.forEach(user => {
+                user.status = status;
+                user.logs.push(`${new Date().toLocaleString()}: Status changed to ${status} (bulk)`);
+                const tx = db.transaction('users', 'readwrite');
+                tx.objectStore('users').put(user);
+            });
+            renderUsers();
+            showModal(`All users ${status === 'active' ? 'approved' : 'banned'}.`);
+            logUserActivity(`Bulk updated user statuses to ${status}`);
+        }
+
+        function exportAuditLogs() {
+            const logs = users.flatMap(user => user.logs.map(log => `${user.name}: ${log}`));
+            const blob = new Blob([logs.join('\n')], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'audit_logs.txt';
+            a.click();
+            URL.revokeObjectURL(url);
+            showModal('Audit logs exported.');
+        }
+
+        function analyzeUserBehavior() {
+            if (subscriptionTier === 'premium') {
+                showModal('AI Analysis: High adherence users are 80% more likely to maintain streaks. Target low adherence with reminders.');
+            } else {
+                showModal('Behavior analysis is a premium feature. Upgrade now!', [
+                    { label: 'Upgrade', action: simulateUpgrade },
+                    { label: 'Cancel', action: closeModal }
+                ]);
+            }
+        }
+
+        function updateAdminChart() {
+            const ctx = document.getElementById('adminChart').getContext('2d');
+            if (adminChartInstance) adminChartInstance.destroy();
+            adminChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: users.map(u => u.name),
+                    datasets: [
+                        { label: 'Missed Doses', data: users.map(u => u.missedDoses), backgroundColor: '#1e3c72' },
+                        { label: 'Points', data: users.map(u => u.points || 0), backgroundColor: '#2a5298' }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        }
+
+        function renderActivityLogs() {
+            const logsDiv = document.getElementById('activityLogs');
+            logsDiv.innerHTML = '<h3>User Activity Logs</h3>';
+            users.forEach(user => {
+                user.logs.forEach(log => {
+                    logsDiv.innerHTML += `<p>${user.name}: ${log}</p>`;
+                });
+            });
+        }
+
+        // AI Assistant
+        function askAssistant() {
+            const query = document.getElementById('assistantQuery').value;
+            if (query) {
+                const responses = {
+                    'blood pressure': 'To lower blood pressure, try a low-sodium diet, regular exercise, and stress management (Mock AI).',
+                    'diabetes': 'Manage diabetes with a balanced diet, regular monitoring, and medication adherence (Mock AI).'
+                };
+                const response = Object.keys(responses).find(key => query.toLowerCase().includes(key)) ? responses[Object.keys(responses).find(key => query.toLowerCase().includes(key))] : 'Please consult a doctor for personalized advice (Mock AI).';
+                document.getElementById('assistantResponse').innerHTML = `<p><strong>AI Response:</strong> ${response}</p>`;
+                logUserActivity(`Asked AI: ${query}`);
+            } else {
+                showModal('Please enter a question.');
+            }
+        }
+
+        function voiceAssistant() {
+            if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                const recognition = new SpeechRecognition();
+                recognition.lang = document.getElementById('language').value === 'hi' ? 'hi-IN' : document.getElementById('language').value === 'te' ? 'te-IN' : 'en-US';
+                recognition.onresult = (event) => {
+                    document.getElementById('assistantQuery').value = event.results[0][0].transcript;
+                    askAssistant();
+                };
+                recognition.start();
+            } else {
+                showModal('Voice commands not supported.');
+            }
+        }
+
+        function speakTranslation(message) {
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(message);
+                utterance.lang = document.getElementById('language').value === 'hi' ? 'hi-IN' : document.getElementById('language').value === 'te' ? 'te-IN' : 'en-US';
+                speechSynthesis.speak(utterance);
+            }
+        }
+
+        function logUserActivity(action) {
+            const user = users.find(u => u.id === 1);
+            if (user) {
+                user.logs.push(`${new Date().toLocaleString()}: ${action}`);
+                user.points = points;
+                const tx = db.transaction('users', 'readwrite');
+                tx.objectStore('users').put(user);
+            }
+        }
+
+        // Slideshow
+        let slideIndex = 0;
+        function showSlides() {
+            const slides = document.querySelectorAll('.slide');
+            slides.forEach(s => s.classList.remove('active'));
+            slideIndex = (slideIndex + 1) % slides.length;
+            slides[slideIndex].classList.add('active');
+            setTimeout(showSlides, 3000);
+        }
+
+        // Offline Notifications with Edge Computing
+        function cacheNotification(message, delay = 5000) {
+            if ('serviceWorker' in navigator && 'PushManager' in window) {
+                navigator.serviceWorker.controller.postMessage({ message, delay });
+                showModal(`Notification cached via edge computing (Mock CDN)`);
+            } else {
+                setTimeout(() => alert(message), delay);
+            }
+        }
+
+        // Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').then(reg => {
+                reg.addEventListener('updatefound', () => {
+                    const newWorker = reg.installing;
+                    newWorker.addEventListener('statechange', () => {
+                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            showModal('New version available! Refresh to update.', [
+                                { label: 'Refresh', action: () => location.reload() },
+                                { label: 'Cancel', action: closeModal }
+                            ]);
+                        }
+                    });
+                });
+            });
+            navigator.serviceWorker.addEventListener('message', event => {
+                alert(event.data.message);
+            });
+        }
+
+        // PWA Install Prompt
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            showModal('Install this app for offline access and faster performance!', [
+                { label: 'Install', action: () => { deferredPrompt.prompt(); closeModal(); } },
+                { label: 'Cancel', action: closeModal }
+            ]);
+        });
+
+        // WebAssembly Mock
+        function simulateWebAssembly() {
+            showModal('Data processed 10x faster with WebAssembly (Mock)');
+        }
+
+        // Initialize
+        if (localStorage.getItem('isLoggedIn') === 'true') {
+            isLoggedIn = true;
+            userRole = localStorage.getItem('userRole') || 'user';
+            userEmail = localStorage.getItem('userEmail') || '';
+            userName = localStorage.getItem('userName') || 'User';
+            document.getElementById('userName').textContent = userName;
+        }
+        if (localStorage.getItem('language')) {
+            document.getElementById('language').value = localStorage.getItem('language');
+        }
+        updateNavigation();
+        renderCalendar();
+        renderMedications();
+        renderMetrics();
+        renderPosts();
+        changeLanguage();
+        showSlides();
+        updateStats();
+        simulateWebAssembly();
+    </script>
+</body>
+</html>
